@@ -2,10 +2,12 @@ from discord.ext import commands
 from discord.ext.commands import Context
 
 import random
+import asyncio
 
-class DuelTournament(commands.Cog, name="duel_tournament"):
+class DuelTournament(commands.Cog, name="tournament"):
     def __init__(self, bot):
         self.bot = bot
+        self.duel_results = {}  # dictionary to store the results of each duel
 
     @commands.command(
         name="start_tournament",
@@ -41,29 +43,54 @@ class DuelTournament(commands.Cog, name="duel_tournament"):
                 if i == j:
                     continue
 
-                # Duel the members and update their scores
-                winner = self.duel(member1, member2)
+                # Duel the members
+                winner = await self.duel(context, member1, member2)
+
+                # Update the scores based on the result of the duel
                 if winner == member1:
                     scores[member1] += 1
                 elif winner == member2:
                     scores[member2] += 1
 
+                # Store the result of the duel in the duel_results dictionary
+                self.duel_results[f"{member1.name} vs {member2.name}"] = winner.name
+
         # Determine the winner of the tournament
         winner = max(scores, key=scores.get)
 
         # Announce the winner
-        await context.send(f"{winner.mention} is the winner of the tournament with {scores[winner]} wins!")
+        await context.send(f"{winner} is the winner of the tournament with {scores[winner]} wins!")
 
-    def duel(self, member1, member2):
+    async def duel(self, context, member1, member2):
         """
         Duel two members and return the winner.
 
+        :param context: The application command context.
         :param member1: The first member to duel.
         :param member2: The second member to duel.
         :return: The member who won the duel.
         """
-        # Determine the winner of the duel randomly
-        return random.choice([member1, member2])
+        # Announce the start of the duel
+        await context.send(f"{member1.mention}, {member2.mention}: it's time for your duel! The first to type 'I lost' loses the duel.")
+
+        # Create a dictionary to store the responses from each member
+        responses = {member1: None, member2: None}
+
+        # Wait for both members to respond
+        while None in responses.values():
+            # Wait for a response from one of the members
+            response = await self.bot.wait_for('message', check=lambda message: message.author in [member1, member2] and message.content.lower() == "i lost")
+
+            # Store the response in the responses dictionary
+            responses[response.author] = response.content
+
+        # Determine the winner of the duel
+        winner = next(member for member, response in responses.items() if response is not None)
+
+        # Announce the winner of the duel
+        await context.send(f"{winner.mention} wins the duel!")
+
+        return winner
 
 async def setup(bot):
     await bot.add_cog(DuelTournament(bot))
