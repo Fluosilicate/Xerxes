@@ -52,14 +52,16 @@ intents.reactions = True
 intents.typing = True
 intents.voice_states = True
 intents.webhooks = True
+intents.all = True
 
 Privileged Intents (Needs to be enabled on developer portal of Discord), please use them only if you need them:
 intents.members = True
 intents.message_content = True
 intents.presences = True
+intents.all = True
 """
 
-intents = discord.Intents.default()
+intents = discord.Intents.all()
 
 """
 Uncomment this if you don't want to use prefix (normal) commands.
